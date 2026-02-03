@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { Product, User, CartItem, SiteContent, MetalPurity, StoneType } from '../types';
 import { INITIAL_PRODUCTS, INITIAL_SITE_CONTENT, PRICING_RULES } from '../constants';
+import { supabase } from '../services/supabase';
 
 interface StoreContextType {
   products: Product[];
@@ -15,66 +16,99 @@ interface StoreContextType {
   users: User[];
   setUsers: React.Dispatch<React.SetStateAction<User[]>>;
   siteContent: SiteContent;
-  updateSiteContent: (content: SiteContent) => void;
+  updateSiteContent: (content: SiteContent) => Promise<void>;
   calculatePrice: (product: Product, metal: MetalPurity, stone: StoneType) => { original: number, final: number };
-  toggleWishlist: (productId: string) => void;
+  toggleWishlist: (productId: string) => Promise<void>;
+  isLoading: boolean;
 }
 
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
 
-const DEFAULT_ADMIN: User = {
-  id: 'u-admin',
-  email: 'admin@aurelia.com',
-  password: 'admin',
-  name: 'Boutique Curator',
-  isAdmin: true,
-  isApproved: true,
-  orderHistory: [],
-  isSubscribed: true,
-  wishlist: []
-};
-
 export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const getInitialState = <T,>(key: string, defaultValue: T): T => {
+  const [products, setProducts] = useState<Product[]>(INITIAL_PRODUCTS);
+  const [cart, setCart] = useState<CartItem[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [siteContent, setSiteContent] = useState<SiteContent>(INITIAL_SITE_CONTENT);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Initial Data Load from Supabase
+  const fetchData = useCallback(async () => {
+    setIsLoading(true);
     try {
-      const saved = localStorage.getItem(key);
-      if (!saved) return defaultValue;
-      const parsed = JSON.parse(saved);
-      if (key === 'al_users_list' && (!Array.isArray(parsed) || parsed.length === 0)) {
-        return [DEFAULT_ADMIN] as unknown as T;
+      const [
+        { data: productsData, error: prodError },
+        { data: usersData, error: userError },
+        { data: siteData, error: siteError }
+      ] = await Promise.all([
+        supabase.from('products').select('*'),
+        supabase.from('users').select('*'),
+        supabase.from('site_content').select('*').eq('id', 'main').maybeSingle()
+      ]);
+
+      // If we got valid data, use it. Otherwise, defaults remain.
+      if (productsData && productsData.length > 0) {
+        setProducts(productsData as Product[]);
+      } else {
+        console.info("Using local product registry.");
+        setProducts(INITIAL_PRODUCTS);
       }
-      return parsed;
-    } catch (e) {
-      console.error(`Error loading ${key} from storage:`, e);
-      return defaultValue;
+      
+      if (usersData) {
+        const mappedUsers = (usersData as any[]).map(u => ({
+          id: u.id,
+          email: u.email,
+          password: u.password,
+          name: u.name,
+          isAdmin: u.is_admin ?? u.isAdmin,
+          isApproved: u.is_approved ?? u.isApproved,
+          orderHistory: u.order_history || u.orderHistory || [],
+          isSubscribed: u.is_subscribed || u.isSubscribed || false,
+          wishlist: u.wishlist || []
+        })) as User[];
+        setUsers(mappedUsers);
+
+        const savedUserId = localStorage.getItem('al_current_user_id');
+        if (savedUserId) {
+          const found = mappedUsers.find(u => u.id === savedUserId);
+          if (found && found.isApproved) setCurrentUser(found);
+        }
+      }
+
+      if (siteData) {
+        setSiteContent({
+          hero: siteData.hero || INITIAL_SITE_CONTENT.hero,
+          philosophy: siteData.philosophy || INITIAL_SITE_CONTENT.philosophy,
+          social: siteData.social || INITIAL_SITE_CONTENT.social
+        });
+      }
+    } catch (error) {
+      console.warn("Supabase fetch failed, falling back to local boutique state.", error);
+      setProducts(INITIAL_PRODUCTS);
+    } finally {
+      setIsLoading(false);
     }
-  };
-
-  const [products, setProducts] = useState<Product[]>(() => getInitialState('al_products', INITIAL_PRODUCTS));
-  const [cart, setCart] = useState<CartItem[]>(() => getInitialState('al_cart', []));
-  const [users, setUsers] = useState<User[]>(() => getInitialState('al_users_list', [DEFAULT_ADMIN]));
-  const [currentUser, setCurrentUser] = useState<User | null>(() => getInitialState('al_user', null));
-  const [siteContent, setSiteContent] = useState<SiteContent>(() => getInitialState('al_site', INITIAL_SITE_CONTENT));
+  }, []);
 
   useEffect(() => {
-    localStorage.setItem('al_products', JSON.stringify(products));
-  }, [products]);
+    fetchData();
 
-  useEffect(() => {
-    localStorage.setItem('al_cart', JSON.stringify(cart));
-  }, [cart]);
+    // Subscribe to Realtime Updates (only if keys likely exist)
+    if (process.env.SUPABASE_URL) {
+      const productSub = supabase.channel('products_realtime')
+        .on('postgres_changes', { event: '*', table: 'products' }, fetchData)
+        .subscribe();
 
-  useEffect(() => {
-    localStorage.setItem('al_users_list', JSON.stringify(users));
-  }, [users]);
+      const userSub = supabase.channel('users_realtime')
+        .on('postgres_changes', { event: '*', table: 'users' }, fetchData)
+        .subscribe();
 
-  useEffect(() => {
-    localStorage.setItem('al_user', JSON.stringify(currentUser));
-  }, [currentUser]);
-
-  useEffect(() => {
-    localStorage.setItem('al_site', JSON.stringify(siteContent));
-  }, [siteContent]);
+      return () => {
+        supabase.removeChannel(productSub);
+        supabase.removeChannel(userSub);
+      };
+    }
+  }, [fetchData]);
 
   const calculatePrice = useCallback((product: Product, metal: MetalPurity, stone: StoneType) => {
     const baseWithOptions = product.basePrice + (PRICING_RULES.metal[metal] || 0) + (PRICING_RULES.stone[stone] || 0);
@@ -105,26 +139,42 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const clearCart = () => setCart([]);
-  const updateSiteContent = (content: SiteContent) => setSiteContent(content);
 
-  const toggleWishlist = (productId: string) => {
+  const updateSiteContent = async (content: SiteContent) => {
+    const { error } = await supabase
+      .from('site_content')
+      .upsert({
+        id: 'main',
+        hero: content.hero,
+        philosophy: content.philosophy,
+        social: content.social
+      });
+    
+    if (!error) setSiteContent(content);
+  };
+
+  const toggleWishlist = async (productId: string) => {
     if (!currentUser) return;
-    setCurrentUser(prev => {
-      if (!prev) return null;
-      const updatedWishlist = prev.wishlist.includes(productId)
-        ? prev.wishlist.filter(id => id !== productId)
-        : [...prev.wishlist, productId];
-      const updatedUser = { ...prev, wishlist: updatedWishlist };
-      setUsers(allUsers => allUsers.map(u => u.id === updatedUser.id ? updatedUser : u));
-      return updatedUser;
-    });
+    
+    const updatedWishlist = currentUser.wishlist.includes(productId)
+      ? currentUser.wishlist.filter(id => id !== productId)
+      : [...currentUser.wishlist, productId];
+    
+    const { error } = await supabase
+      .from('users')
+      .update({ wishlist: updatedWishlist })
+      .eq('id', currentUser.id);
+
+    if (!error) {
+      setCurrentUser({ ...currentUser, wishlist: updatedWishlist });
+    }
   };
 
   return (
     <StoreContext.Provider value={{
       products, setProducts, cart, addToCart, removeFromCart, clearCart,
       currentUser, setCurrentUser, users, setUsers, siteContent, updateSiteContent,
-      calculatePrice, toggleWishlist
+      calculatePrice, toggleWishlist, isLoading
     }}>
       {children}
     </StoreContext.Provider>

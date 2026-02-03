@@ -1,78 +1,85 @@
 
-import React, { useState } from 'react';
-import { User as UserIcon, Settings, LogOut, Shield, Key, ArrowLeft, Mail, Clock } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { User as UserIcon, Settings, LogOut, Shield, Key, ArrowLeft, Mail, Clock, Loader2 } from 'lucide-react';
 import { useStore } from '../contexts/StoreContext';
+import { supabase } from '../services/supabase';
 import { User } from '../types';
 
 const Profile: React.FC = () => {
-  const { currentUser, setCurrentUser, users, setUsers } = useStore();
+  const { currentUser, setCurrentUser, isLoading: storeLoading } = useStore();
   const [view, setView] = useState<'login' | 'register' | 'forgot'>('login');
   const [form, setForm] = useState({ name: '', email: '', password: '' });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [isProcessing, setIsProcessing] = useState(false);
 
-  const handleAuth = (e: React.FormEvent) => {
+  const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setIsProcessing(true);
     
+    const email = form.email.trim().toLowerCase();
+    const password = form.password.trim();
+
     if (view === 'login') {
-      const searchEmail = form.email.trim().toLowerCase();
-      const searchPassword = form.password.trim();
-
-      const user = users.find(u => u.email.toLowerCase() === searchEmail);
+      const { data: user, error: dbError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('email', email)
+        .eq('password', password)
+        .single();
       
-      if (!user) {
-        setError('This email address is not recognized in our heritage registry.');
-        return;
+      if (dbError || !user) {
+        setError('The artisan records do not match these credentials.');
+      } else if (!user.is_approved) {
+        setError('Your membership application is currently under artisan review.');
+      } else {
+        // Fix: Properly normalize raw database response to User interface
+        const normalizedUser: User = {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          password: user.password,
+          isAdmin: user.is_admin,
+          isApproved: user.is_approved,
+          isSubscribed: user.is_subscribed || false,
+          orderHistory: [],
+          wishlist: user.wishlist || []
+        };
+        setCurrentUser(normalizedUser);
+        localStorage.setItem('al_current_user_id', normalizedUser.id);
+        setSuccess('Identity verified. Welcome back.');
       }
-
-      if (user.password !== searchPassword) {
-        setError('The password provided does not match our records for this member.');
-        return;
-      }
-
-      if (!user.isApproved) {
-        setError('Your membership application is currently under artisan review. You will be granted access once a curator confirms your status.');
-        return;
-      }
-
-      setCurrentUser(user);
-      setSuccess('Identity verified. Welcome to the Boutique.');
     } else if (view === 'register') {
-      const email = form.email.trim().toLowerCase();
-      
-      if (users.some(u => u.email.toLowerCase() === email)) {
-        setError('An account with this email already exists in our archives.');
-        return;
+      const id = 'u-' + Math.random().toString(36).substring(7);
+      const { error: regError } = await supabase
+        .from('users')
+        .insert([{
+          id,
+          name: form.name.trim(),
+          email,
+          password,
+          is_admin: false,
+          is_approved: false,
+          wishlist: []
+        }]);
+
+      if (regError) {
+        setError('This email is already registered in our heritage circle.');
+      } else {
+        setSuccess('Your membership request has been submitted for artisan review.');
+        setForm({ name: '', email: '', password: '' });
+        setTimeout(() => setView('login'), 3500);
       }
-
-      const newUser: User = {
-        id: 'u-' + Math.random().toString(36).substring(7),
-        name: form.name.trim(),
-        email: email,
-        password: form.password.trim(),
-        isAdmin: false,
-        isApproved: false, // Must be approved by an Admin
-        orderHistory: [],
-        isSubscribed: true,
-        wishlist: []
-      };
-
-      setUsers([...users, newUser]);
-      setSuccess('Your membership request has been submitted for artisan review. Please await approval.');
-      setForm({ name: '', email: '', password: '' });
-      setTimeout(() => setView('login'), 3500);
     }
+    setIsProcessing(false);
   };
 
-  const handleForgot = (e: React.FormEvent) => {
-    e.preventDefault();
-    setSuccess(`A restoration link has been dispatched to ${form.email}.`);
-    setTimeout(() => {
-      setSuccess('');
-      setView('login');
-    }, 4000);
-  };
+  if (storeLoading) return (
+    <div className="h-screen flex items-center justify-center">
+      <Loader2 className="animate-spin text-gold" size={48} />
+    </div>
+  );
 
   if (currentUser) {
     return (
@@ -99,7 +106,7 @@ const Profile: React.FC = () => {
               </button>
             )}
             <button 
-              onClick={() => setCurrentUser(null)}
+              onClick={() => { setCurrentUser(null); localStorage.removeItem('al_current_user_id'); }}
               className="border border-charcoal/20 px-6 py-3 text-[10px] uppercase tracking-widest font-bold rounded-full hover:bg-red-50 hover:border-red-200 transition-all flex items-center space-x-2"
             >
               <LogOut size={14} />
@@ -137,60 +144,13 @@ const Profile: React.FC = () => {
               </div>
             </section>
           </div>
-
-          <div className="space-y-8">
-            <div className="glass p-8 border-gold/10 text-center">
-              <h3 className="font-serif text-lg mb-2">Artisan Points</h3>
-              <p className="text-xs text-charcoal/60 italic mb-6">Redeemable for bespoke creations.</p>
-              <div className="w-24 h-24 bg-gold/5 rounded-full border-2 border-gold/10 flex flex-col items-center justify-center mx-auto mb-4">
-                <span className="text-2xl font-serif text-gold">1,250</span>
-                <span className="text-[8px] uppercase tracking-widest">Points</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (view === 'forgot') {
-    return (
-      <div className="page-transition py-24 px-4 max-w-md mx-auto">
-        <div className="glass p-12 border-gold/10 shadow-2xl">
-          <button onClick={() => setView('login')} className="flex items-center gap-2 text-gold text-[10px] uppercase tracking-widest font-bold mb-8 hover:translate-x-[-4px] transition-transform">
-            <ArrowLeft size={12} /> Back to Sign In
-          </button>
-          <header className="text-center mb-12">
-            <h1 className="text-3xl font-serif text-charcoal mb-4">Restore Access</h1>
-            <p className="text-[10px] uppercase tracking-widest text-gold font-bold">Credential Recovery</p>
-          </header>
-          {success && <p className="bg-green-50 text-green-700 p-4 rounded text-xs mb-6 text-center italic">{success}</p>}
-          <form onSubmit={handleForgot} className="space-y-6">
-            <div className="relative">
-              <Mail className="absolute left-3 top-3 text-gold/50" size={14} />
-              <input 
-                required
-                type="email"
-                placeholder="Heritage Email Address" 
-                className="w-full bg-cream border-b border-gold/30 p-3 pl-10 text-sm outline-none focus:border-gold"
-                value={form.email}
-                onChange={e => setForm({...form, email: e.target.value})}
-              />
-            </div>
-            <button 
-              type="submit"
-              className="w-full bg-charcoal text-cream py-4 uppercase tracking-widest text-xs font-bold hover:bg-gold transition-all shadow-xl"
-            >
-              Dispatch Recovery Link
-            </button>
-          </form>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="page-transition py-24 px-4 max-w-md mx-auto">
+    <div className="page-transition py-24 px-4 max-md mx-auto">
       <div className="glass p-12 border-gold/10 shadow-2xl">
         <header className="text-center mb-12">
           <h1 className="text-4xl font-serif text-charcoal mb-4">
@@ -229,22 +189,12 @@ const Profile: React.FC = () => {
             onChange={e => setForm({...form, password: e.target.value})}
           />
           
-          {view === 'login' && (
-            <div className="text-right">
-              <button 
-                type="button" 
-                onClick={() => setView('forgot')}
-                className="text-[10px] uppercase tracking-widest text-gold font-bold hover:text-charcoal transition-colors"
-              >
-                Forgotten Password?
-              </button>
-            </div>
-          )}
-
           <button 
             type="submit"
-            className="w-full bg-charcoal text-cream py-4 uppercase tracking-widest text-xs font-bold hover:bg-gold transition-all shadow-xl"
+            disabled={isProcessing}
+            className="w-full bg-charcoal text-cream py-4 uppercase tracking-widest text-xs font-bold hover:bg-gold transition-all shadow-xl disabled:opacity-50 flex items-center justify-center gap-2"
           >
+            {isProcessing && <Loader2 className="animate-spin" size={14} />}
             {view === 'login' ? 'Sign In' : 'Submit Membership Request'}
           </button>
         </form>
