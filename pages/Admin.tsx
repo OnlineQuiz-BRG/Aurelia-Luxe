@@ -39,13 +39,23 @@ const Admin: React.FC = () => {
 
   const handleCreateUser = (e: React.FormEvent) => {
     e.preventDefault();
-    const userObj: User = {
+    
+    // Normalize data: trim and lowercase email for robust matching
+    const normalizedUser = {
       ...newUser,
+      name: newUser.name.trim(),
+      email: newUser.email.trim().toLowerCase(),
+      password: newUser.password.trim()
+    };
+
+    const userObj: User = {
+      ...normalizedUser,
       id: 'u-' + Math.random().toString(36).substring(7),
       orderHistory: [],
       isSubscribed: true,
       wishlist: []
     };
+
     setUsers([...users, userObj]);
     setNewUser({ name: '', email: '', password: '', isAdmin: false });
     setIsCreatingUser(false);

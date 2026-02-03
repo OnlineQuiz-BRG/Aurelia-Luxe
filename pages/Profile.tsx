@@ -16,7 +16,15 @@ const Profile: React.FC = () => {
     setError('');
     
     if (view === 'login') {
-      const user = users.find(u => u.email === form.email && u.password === form.password);
+      // Normalize search criteria
+      const searchEmail = form.email.trim().toLowerCase();
+      const searchPassword = form.password.trim();
+
+      const user = users.find(u => 
+        u.email.toLowerCase() === searchEmail && 
+        u.password === searchPassword
+      );
+
       if (user) {
         setCurrentUser(user);
       } else {
