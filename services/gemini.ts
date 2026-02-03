@@ -1,6 +1,12 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
 
+declare var process: {
+  env: {
+    API_KEY?: string;
+  }
+};
+
 const SYSTEM_INSTRUCTION = `
 You are the "Aurelia Luxe AI Concierge," a world-class jewelry specialist. 
 Your tone is sophisticated, elegant, and exclusive. 

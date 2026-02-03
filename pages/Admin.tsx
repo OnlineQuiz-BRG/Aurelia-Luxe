@@ -1,8 +1,8 @@
 
 import React, { useState } from 'react';
-import { Settings, Package, Layout as LayoutIcon, Users, Plus, Edit2, Trash2, Save, Image as ImageIcon, Key, Mail, UserPlus, ShieldCheck, Check, X, Clock, Loader2 } from 'lucide-react';
+import { Settings, Plus, Edit2, Trash2, Image as ImageIcon, UserPlus, Clock, Loader2 } from 'lucide-react';
 import { useStore } from '../contexts/StoreContext';
-import { Product, SiteContent, User } from '../types';
+import { Product, User } from '../types';
 import { supabase } from '../services/supabase';
 
 const Admin: React.FC = () => {
@@ -111,8 +111,8 @@ const Admin: React.FC = () => {
           </div>
         </div>
         <div className="flex glass p-1 rounded-lg border-gold/10">
-          {['Inventory', 'Site', 'Users'].map(tab => (
-            <button key={tab} onClick={() => setActiveTab(tab as any)} className={`px-6 py-2 rounded-md text-[10px] uppercase tracking-widest font-bold transition-all ${activeTab === tab ? 'bg-charcoal text-white shadow-lg' : 'text-charcoal/50 hover:text-gold'}`}>{tab}</button>
+          {(['Inventory', 'Site', 'Users'] as const).map(tab => (
+            <button key={tab} onClick={() => setActiveTab(tab)} className={`px-6 py-2 rounded-md text-[10px] uppercase tracking-widest font-bold transition-all ${activeTab === tab ? 'bg-charcoal text-white shadow-lg' : 'text-charcoal/50 hover:text-gold'}`}>{tab}</button>
           ))}
         </div>
       </div>
@@ -172,18 +172,36 @@ const Admin: React.FC = () => {
         </div>
       )}
 
+      {!isLoading && activeTab === 'Site' && (
+        <div className="max-w-4xl mx-auto space-y-12 animate-in fade-in slide-in-from-bottom-2">
+          <div className="glass p-10 border-gold/10 space-y-6">
+            <h3 className="text-xl font-serif flex items-center gap-3"><ImageIcon className="text-gold" /> Boutique Narrative Editor</h3>
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <label className="text-[10px] uppercase font-bold text-gold">Hero Title</label>
+                <input className="w-full bg-cream border-b border-gold/20 p-3 text-lg font-serif" value={siteContent.hero.title} onChange={e => updateSiteContent({...siteContent, hero: {...siteContent.hero, title: e.target.value}})} />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] uppercase font-bold text-gold">Sub-narrative</label>
+                <textarea className="w-full bg-cream border-b border-gold/20 p-3 text-sm" value={siteContent.hero.subtitle} onChange={e => updateSiteContent({...siteContent, hero: {...siteContent.hero, subtitle: e.target.value}})} />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {editingProduct && (
         <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-charcoal/70 backdrop-blur-md" onClick={() => setEditingProduct(null)} />
           <form onSubmit={handleProductSave} className="relative glass-dark text-white w-full max-w-2xl p-10 rounded-2xl space-y-8 max-h-[90vh] overflow-y-auto border border-gold/20 shadow-2xl">
             <h3 className="text-2xl font-serif text-gold">Catalog Masterpiece</h3>
             <div className="grid grid-cols-2 gap-8">
-              <div className="space-y-2"><label className="text-[10px] uppercase text-gold">SKU</label><input required className="w-full bg-white/5 border-b border-gold/30 p-2 text-sm" value={editingProduct.sku} onChange={e => setEditingProduct({...editingProduct, sku: e.target.value})} /></div>
-              <div className="space-y-2"><label className="text-[10px] uppercase text-gold">Name</label><input required className="w-full bg-white/5 border-b border-gold/30 p-2 text-sm" value={editingProduct.name} onChange={e => setEditingProduct({...editingProduct, name: e.target.value})} /></div>
-              <div className="space-y-2"><label className="text-[10px] uppercase text-gold">Base Price (₹)</label><input required type="number" className="w-full bg-white/5 border-b border-gold/30 p-2 text-sm" value={editingProduct.basePrice} onChange={e => setEditingProduct({...editingProduct, basePrice: Number(e.target.value)})} /></div>
-              <div className="space-y-2"><label className="text-[10px] uppercase text-gold">Weight</label><input className="w-full bg-white/5 border-b border-gold/30 p-2 text-sm" value={editingProduct.weight} onChange={e => setEditingProduct({...editingProduct, weight: e.target.value})} /></div>
+              <div className="space-y-2"><label className="text-[10px] uppercase text-gold">SKU</label><input required className="w-full bg-white/5 border-b border-gold/30 p-2 text-sm" value={editingProduct.sku || ''} onChange={e => setEditingProduct({...editingProduct, sku: e.target.value})} /></div>
+              <div className="space-y-2"><label className="text-[10px] uppercase text-gold">Name</label><input required className="w-full bg-white/5 border-b border-gold/30 p-2 text-sm" value={editingProduct.name || ''} onChange={e => setEditingProduct({...editingProduct, name: e.target.value})} /></div>
+              <div className="space-y-2"><label className="text-[10px] uppercase text-gold">Base Price (₹)</label><input required type="number" className="w-full bg-white/5 border-b border-gold/30 p-2 text-sm" value={editingProduct.basePrice || 0} onChange={e => setEditingProduct({...editingProduct, basePrice: Number(e.target.value)})} /></div>
+              <div className="space-y-2"><label className="text-[10px] uppercase text-gold">Weight</label><input className="w-full bg-white/5 border-b border-gold/30 p-2 text-sm" value={editingProduct.weight || ''} onChange={e => setEditingProduct({...editingProduct, weight: e.target.value})} /></div>
             </div>
-            <textarea placeholder="Description" className="w-full bg-white/5 border-b border-gold/30 p-2 text-sm h-24 resize-none" value={editingProduct.description} onChange={e => setEditingProduct({...editingProduct, description: e.target.value})} />
+            <textarea placeholder="Description" className="w-full bg-white/5 border-b border-gold/30 p-2 text-sm h-24 resize-none" value={editingProduct.description || ''} onChange={e => setEditingProduct({...editingProduct, description: e.target.value})} />
             <div className="flex items-center space-x-6">
               <div className="w-24 h-24 bg-white/10 rounded-xl flex items-center justify-center overflow-hidden border border-gold/20">{editingProduct.images?.[0] ? <img src={editingProduct.images[0]} className="w-full h-full object-cover" /> : <ImageIcon size={32} className="text-gold/20" />}</div>
               <label className="bg-gold text-charcoal px-6 py-3 text-[10px] uppercase font-bold cursor-pointer rounded-full hover:bg-white transition-all">Update Image<input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} /></label>

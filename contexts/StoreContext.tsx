@@ -1,6 +1,6 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { Product, User, CartItem, SiteContent, MetalPurity, StoneType } from '../types';
+import { Product, User, CartItem, SiteContent, MetalPurity, StoneType, StockStatus } from '../types';
 import { INITIAL_PRODUCTS, INITIAL_SITE_CONTENT, PRICING_RULES } from '../constants';
 import { supabase } from '../services/supabase';
 
@@ -46,7 +46,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       ]);
 
       if (productsData && productsData.length > 0) {
-        setProducts(productsData.map(p => ({
+        setProducts(productsData.map((p: any) => ({
           id: p.id,
           sku: p.sku,
           name: p.name,
@@ -54,10 +54,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           basePrice: Number(p.base_price),
           discount: p.discount,
           category: p.category,
-          metalPurity: p.metal_purity,
-          stoneType: p.stone_type,
+          metalPurity: p.metal_purity as MetalPurity,
+          stoneType: p.stone_type as StoneType,
           images: p.images || [],
-          stockStatus: p.stock_status,
+          stockStatus: p.stock_status as StockStatus,
           weight: p.weight,
           hallmark: p.hallmark,
           isNew: p.is_new,
@@ -69,15 +69,15 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       }
       
       if (usersData) {
-        const mappedUsers = (usersData as any[]).map(u => ({
+        const mappedUsers = (usersData as any[]).map((u: any) => ({
           id: u.id,
           email: u.email,
           password: u.password,
           name: u.name,
-          isAdmin: u.is_admin,
-          isApproved: u.is_approved,
+          isAdmin: !!u.is_admin,
+          isApproved: !!u.is_approved,
           orderHistory: u.order_history || [],
-          isSubscribed: u.is_subscribed || false,
+          isSubscribed: !!u.is_subscribed,
           wishlist: u.wishlist || []
         })) as User[];
         setUsers(mappedUsers);
