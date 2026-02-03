@@ -20,6 +20,14 @@ const Profile: React.FC = () => {
       const searchEmail = form.email.trim().toLowerCase();
       const searchPassword = form.password.trim();
 
+      // Check if user exists first
+      const userExists = users.some(u => u.email.toLowerCase() === searchEmail);
+      
+      if (!userExists) {
+        setError('This email address is not recognized in our heritage registry.');
+        return;
+      }
+
       const user = users.find(u => 
         u.email.toLowerCase() === searchEmail && 
         u.password === searchPassword
@@ -27,8 +35,9 @@ const Profile: React.FC = () => {
 
       if (user) {
         setCurrentUser(user);
+        setSuccess('Identity verified. Welcome to the Boutique.');
       } else {
-        setError('Invalid credentials. Please verify your email and password.');
+        setError('The password provided does not match our records for this member.');
       }
     } else if (view === 'register') {
       setSuccess('Your membership request has been submitted for artisan review.');

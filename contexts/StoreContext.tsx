@@ -34,36 +34,49 @@ const DEFAULT_ADMIN: User = {
 };
 
 export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [products, setProducts] = useState<Product[]>(() => {
-    const saved = localStorage.getItem('al_products');
-    return saved ? JSON.parse(saved) : INITIAL_PRODUCTS;
-  });
+  // Initialization helpers to ensure valid data from localStorage
+  const getInitialState = <T,>(key: string, defaultValue: T): T => {
+    try {
+      const saved = localStorage.getItem(key);
+      if (!saved) return defaultValue;
+      const parsed = JSON.parse(saved);
+      // Extra check for users list to ensure it's not an empty array if it should have the admin
+      if (key === 'al_users_list' && (!Array.isArray(parsed) || parsed.length === 0)) {
+        return [DEFAULT_ADMIN] as unknown as T;
+      }
+      return parsed;
+    } catch (e) {
+      console.error(`Error loading ${key} from storage:`, e);
+      return defaultValue;
+    }
+  };
 
-  const [cart, setCart] = useState<CartItem[]>(() => {
-    const saved = localStorage.getItem('al_cart');
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [products, setProducts] = useState<Product[]>(() => getInitialState('al_products', INITIAL_PRODUCTS));
+  const [cart, setCart] = useState<CartItem[]>(() => getInitialState('al_cart', []));
+  const [users, setUsers] = useState<User[]>(() => getInitialState('al_users_list', [DEFAULT_ADMIN]));
+  const [currentUser, setCurrentUser] = useState<User | null>(() => getInitialState('al_user', null));
+  const [siteContent, setSiteContent] = useState<SiteContent>(() => getInitialState('al_site', INITIAL_SITE_CONTENT));
 
-  const [users, setUsers] = useState<User[]>(() => {
-    const saved = localStorage.getItem('al_users_list');
-    return saved ? JSON.parse(saved) : [DEFAULT_ADMIN];
-  });
+  // Sync to localStorage whenever state changes
+  useEffect(() => {
+    localStorage.setItem('al_products', JSON.stringify(products));
+  }, [products]);
 
-  const [currentUser, setCurrentUser] = useState<User | null>(() => {
-    const saved = localStorage.getItem('al_user');
-    return saved ? JSON.parse(saved) : null;
-  });
+  useEffect(() => {
+    localStorage.setItem('al_cart', JSON.stringify(cart));
+  }, [cart]);
 
-  const [siteContent, setSiteContent] = useState<SiteContent>(() => {
-    const saved = localStorage.getItem('al_site');
-    return saved ? JSON.parse(saved) : INITIAL_SITE_CONTENT;
-  });
+  useEffect(() => {
+    localStorage.setItem('al_users_list', JSON.stringify(users));
+  }, [users]);
 
-  useEffect(() => localStorage.setItem('al_products', JSON.stringify(products)), [products]);
-  useEffect(() => localStorage.setItem('al_cart', JSON.stringify(cart)), [cart]);
-  useEffect(() => localStorage.setItem('al_users_list', JSON.stringify(users)), [users]);
-  useEffect(() => localStorage.setItem('al_user', JSON.stringify(currentUser)), [currentUser]);
-  useEffect(() => localStorage.setItem('al_site', JSON.stringify(siteContent)), [siteContent]);
+  useEffect(() => {
+    localStorage.setItem('al_user', JSON.stringify(currentUser));
+  }, [currentUser]);
+
+  useEffect(() => {
+    localStorage.setItem('al_site', JSON.stringify(siteContent));
+  }, [siteContent]);
 
   const calculatePrice = useCallback((product: Product, metal: MetalPurity, stone: StoneType) => {
     const baseWithOptions = product.basePrice + (PRICING_RULES.metal[metal] || 0) + (PRICING_RULES.stone[stone] || 0);
@@ -86,11 +99,11 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       selectedStone,
       finalPrice: final
     };
-    setCart([...cart, newItem]);
+    setCart(prev => [...prev, newItem]);
   };
 
   const removeFromCart = (index: number) => {
-    setCart(cart.filter((_, i) => i !== index));
+    setCart(prev => prev.filter((_, i) => i !== index));
   };
 
   const clearCart = () => setCart([]);
@@ -99,12 +112,20 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const toggleWishlist = (productId: string) => {
     if (!currentUser) return;
-    const updatedWishlist = currentUser.wishlist.includes(productId)
-      ? currentUser.wishlist.filter(id => id !== productId)
-      : [...currentUser.wishlist, productId];
-    const updatedUser = { ...currentUser, wishlist: updatedWishlist };
-    setCurrentUser(updatedUser);
-    setUsers(users.map(u => u.id === updatedUser.id ? updatedUser : u));
+    
+    setCurrentUser(prev => {
+      if (!prev) return null;
+      const updatedWishlist = prev.wishlist.includes(productId)
+        ? prev.wishlist.filter(id => id !== productId)
+        : [...prev.wishlist, productId];
+      
+      const updatedUser = { ...prev, wishlist: updatedWishlist };
+      
+      // Also sync back to the master users list
+      setUsers(allUsers => allUsers.map(u => u.id === updatedUser.id ? updatedUser : u));
+      
+      return updatedUser;
+    });
   };
 
   return (
