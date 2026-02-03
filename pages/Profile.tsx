@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { User as UserIcon, Settings, LogOut, Shield, Key, ArrowLeft } from 'lucide-react';
+import { User as UserIcon, Settings, LogOut, Shield, Key, ArrowLeft, Mail } from 'lucide-react';
 import { useStore } from '../contexts/StoreContext';
 import { User } from '../types';
 
@@ -20,22 +20,21 @@ const Profile: React.FC = () => {
       if (user) {
         setCurrentUser(user);
       } else {
-        setError('Invalid credentials. (Hint: admin@aurelia.com / admin)');
+        setError('Invalid credentials. Please verify your email and password.');
       }
     } else if (view === 'register') {
-      // Logic handled in StoreContext if we wanted persistence, for now mock success
-      setSuccess('Registration request sent to boutique admins.');
-      setTimeout(() => setView('login'), 2000);
+      setSuccess('Your membership request has been submitted for artisan review.');
+      setTimeout(() => setView('login'), 2500);
     }
   };
 
   const handleForgot = (e: React.FormEvent) => {
     e.preventDefault();
-    setSuccess('Password reset link sent to ' + form.email);
+    setSuccess(`A restoration link has been dispatched to ${form.email}.`);
     setTimeout(() => {
       setSuccess('');
       setView('login');
-    }, 3000);
+    }, 4000);
   };
 
   if (currentUser) {
@@ -47,7 +46,7 @@ const Profile: React.FC = () => {
               <UserIcon size={48} />
             </div>
             <div>
-              <p className="text-[10px] uppercase tracking-widest font-bold text-gold">Aurelia Member</p>
+              <p className="text-[10px] uppercase tracking-widest font-bold text-gold">Heritage Member</p>
               <h1 className="text-4xl font-serif text-charcoal">{currentUser.name}</h1>
               <p className="text-sm text-charcoal/50">{currentUser.email}</p>
             </div>
@@ -59,7 +58,7 @@ const Profile: React.FC = () => {
                 className="bg-gold text-white px-6 py-3 text-[10px] uppercase tracking-widest font-bold rounded-full flex items-center space-x-2 shadow-lg"
               >
                 <Shield size={14} />
-                <span>Curator Suite</span>
+                <span>Curator Dashboard</span>
               </button>
             )}
             <button 
@@ -77,25 +76,25 @@ const Profile: React.FC = () => {
             <section>
               <h2 className="text-xl font-serif mb-6 flex items-center space-x-2">
                 <Settings size={20} className="text-gold" />
-                <span>Account Settings</span>
+                <span>Account Preferences</span>
               </h2>
               <div className="glass p-8 border-gold/10 space-y-6">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                   <div className="space-y-1">
-                    <p className="text-[10px] uppercase tracking-widest text-charcoal/40">Full Name</p>
+                    <p className="text-[10px] uppercase tracking-widest text-charcoal/40">Registered Name</p>
                     <p className="text-sm font-medium">{currentUser.name}</p>
                   </div>
                   <div className="space-y-1">
-                    <p className="text-[10px] uppercase tracking-widest text-charcoal/40">Primary Email</p>
+                    <p className="text-[10px] uppercase tracking-widest text-charcoal/40">Contact Email</p>
                     <p className="text-sm font-medium">{currentUser.email}</p>
                   </div>
                   <div className="space-y-1">
-                    <p className="text-[10px] uppercase tracking-widest text-charcoal/40">Member Type</p>
-                    <p className="text-sm font-medium text-gold">{currentUser.isAdmin ? 'Administrator' : 'Client'}</p>
+                    <p className="text-[10px] uppercase tracking-widest text-charcoal/40">Account Status</p>
+                    <p className="text-sm font-medium text-gold">{currentUser.isAdmin ? 'Master Curator' : 'Valued Client'}</p>
                   </div>
                   <div className="space-y-1">
-                    <p className="text-[10px] uppercase tracking-widest text-charcoal/40">Loyalty Tier</p>
-                    <p className="text-sm font-medium italic">Gold Artisan Circle</p>
+                    <p className="text-[10px] uppercase tracking-widest text-charcoal/40">Heritage Circle</p>
+                    <p className="text-sm font-medium italic">Gold Member</p>
                   </div>
                 </div>
               </div>
@@ -104,10 +103,10 @@ const Profile: React.FC = () => {
 
           <div className="space-y-8">
             <div className="glass p-8 border-gold/10 text-center">
-              <h3 className="font-serif text-lg mb-2">Artisan Rewards</h3>
-              <p className="text-xs text-charcoal/60 italic mb-6">Points earned from handmade acquisitions.</p>
+              <h3 className="font-serif text-lg mb-2">Artisan Points</h3>
+              <p className="text-xs text-charcoal/60 italic mb-6">Redeemable for bespoke creations.</p>
               <div className="w-24 h-24 bg-gold/5 rounded-full border-2 border-gold/10 flex flex-col items-center justify-center mx-auto mb-4">
-                <span className="text-2xl font-serif text-gold">750</span>
+                <span className="text-2xl font-serif text-gold">1,250</span>
                 <span className="text-[8px] uppercase tracking-widest">Points</span>
               </div>
             </div>
@@ -122,27 +121,30 @@ const Profile: React.FC = () => {
       <div className="page-transition py-24 px-4 max-w-md mx-auto">
         <div className="glass p-12 border-gold/10 shadow-2xl">
           <button onClick={() => setView('login')} className="flex items-center gap-2 text-gold text-[10px] uppercase tracking-widest font-bold mb-8 hover:translate-x-[-4px] transition-transform">
-            <ArrowLeft size={12} /> Back to Login
+            <ArrowLeft size={12} /> Back to Sign In
           </button>
           <header className="text-center mb-12">
-            <h1 className="text-3xl font-serif text-charcoal mb-4">Reset Password</h1>
-            <p className="text-[10px] uppercase tracking-widest text-gold font-bold">Account Recovery</p>
+            <h1 className="text-3xl font-serif text-charcoal mb-4">Restore Access</h1>
+            <p className="text-[10px] uppercase tracking-widest text-gold font-bold">Credential Recovery</p>
           </header>
-          {success && <p className="bg-green-50 text-green-700 p-4 rounded text-xs mb-6 text-center">{success}</p>}
+          {success && <p className="bg-green-50 text-green-700 p-4 rounded text-xs mb-6 text-center italic">{success}</p>}
           <form onSubmit={handleForgot} className="space-y-6">
-            <input 
-              required
-              type="email"
-              placeholder="Registered Email Address" 
-              className="w-full bg-cream border-b border-gold/30 p-3 text-sm outline-none focus:border-gold"
-              value={form.email}
-              onChange={e => setForm({...form, email: e.target.value})}
-            />
+            <div className="relative">
+              <Mail className="absolute left-3 top-3 text-gold/50" size={14} />
+              <input 
+                required
+                type="email"
+                placeholder="Heritage Email Address" 
+                className="w-full bg-cream border-b border-gold/30 p-3 pl-10 text-sm outline-none focus:border-gold"
+                value={form.email}
+                onChange={e => setForm({...form, email: e.target.value})}
+              />
+            </div>
             <button 
               type="submit"
               className="w-full bg-charcoal text-cream py-4 uppercase tracking-widest text-xs font-bold hover:bg-gold transition-all shadow-xl"
             >
-              Send Reset Link
+              Dispatch Recovery Link
             </button>
           </form>
         </div>
@@ -155,19 +157,19 @@ const Profile: React.FC = () => {
       <div className="glass p-12 border-gold/10 shadow-2xl">
         <header className="text-center mb-12">
           <h1 className="text-4xl font-serif text-charcoal mb-4">
-            {view === 'login' ? 'Welcome Back' : 'Join the Atelier'}
+            {view === 'login' ? 'Welcome Home' : 'Begin Your Legacy'}
           </h1>
           <p className="text-[10px] uppercase tracking-widest text-gold font-bold">The Aurelia Registry</p>
         </header>
 
-        {error && <p className="bg-red-50 text-red-700 p-4 rounded text-xs mb-6 text-center">{error}</p>}
-        {success && <p className="bg-green-50 text-green-700 p-4 rounded text-xs mb-6 text-center">{success}</p>}
+        {error && <p className="bg-red-50 text-red-700 p-4 rounded text-xs mb-6 text-center italic">{error}</p>}
+        {success && <p className="bg-green-50 text-green-700 p-4 rounded text-xs mb-6 text-center italic">{success}</p>}
 
         <form onSubmit={handleAuth} className="space-y-6">
           {view === 'register' && (
             <input 
               required
-              placeholder="Full Name" 
+              placeholder="Full Legal Name" 
               className="w-full bg-cream border-b border-gold/30 p-3 text-sm outline-none focus:border-gold"
               value={form.name}
               onChange={e => setForm({...form, name: e.target.value})}
@@ -184,7 +186,7 @@ const Profile: React.FC = () => {
           <input 
             required
             type="password"
-            placeholder="Secure Password" 
+            placeholder="Master Password" 
             className="w-full bg-cream border-b border-gold/30 p-3 text-sm outline-none focus:border-gold"
             value={form.password}
             onChange={e => setForm({...form, password: e.target.value})}
@@ -195,9 +197,9 @@ const Profile: React.FC = () => {
               <button 
                 type="button" 
                 onClick={() => setView('forgot')}
-                className="text-[10px] uppercase tracking-widest text-gold font-bold hover:text-charcoal"
+                className="text-[10px] uppercase tracking-widest text-gold font-bold hover:text-charcoal transition-colors"
               >
-                Forgot Password?
+                Forgotten Password?
               </button>
             </div>
           )}
@@ -206,17 +208,17 @@ const Profile: React.FC = () => {
             type="submit"
             className="w-full bg-charcoal text-cream py-4 uppercase tracking-widest text-xs font-bold hover:bg-gold transition-all shadow-xl"
           >
-            {view === 'login' ? 'Sign In' : 'Request Membership'}
+            {view === 'login' ? 'Sign In' : 'Submit Membership Request'}
           </button>
         </form>
 
         <p className="text-center mt-8 text-xs text-charcoal/50">
-          {view === 'login' ? "Don't have an account?" : "Already registered?"}
+          {view === 'login' ? "Not yet registered?" : "Already a member?"}
           <button 
             onClick={() => setView(view === 'login' ? 'register' : 'login')} 
-            className="ml-2 text-gold font-bold uppercase tracking-widest text-[10px]"
+            className="ml-2 text-gold font-bold uppercase tracking-widest text-[10px] hover:underline"
           >
-            {view === 'login' ? 'Create One' : 'Sign In Instead'}
+            {view === 'login' ? 'Create Account' : 'Sign In Now'}
           </button>
         </p>
       </div>
