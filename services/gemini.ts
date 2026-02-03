@@ -32,7 +32,7 @@ export const getGeminiResponse = async (userMessage: string, history: {role: str
       }
     });
 
-    return response.text;
+    return response.text || "Forgive me, but I am at a loss for words.";
   } catch (error) {
     console.error("Gemini Error:", error);
     return "Forgive me, but I am momentarily unable to access our records. How else may I assist you with your inquiries today?";
@@ -94,7 +94,11 @@ export const analyzeStyleMatch = async (base64Image: string, products: any[]) =>
       }
     });
 
-    return JSON.parse(response.text);
+    const responseText = response.text;
+    if (!responseText) {
+      throw new Error("The AI returned an empty response.");
+    }
+    return JSON.parse(responseText);
   } catch (error) {
     console.error("Style Matcher Error:", error);
     return null;
