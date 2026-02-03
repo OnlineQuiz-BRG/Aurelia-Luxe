@@ -1,11 +1,11 @@
 
 import React, { useState } from 'react';
-import { User as UserIcon, Settings, LogOut, Shield, Key, ArrowLeft, Mail } from 'lucide-react';
+import { User as UserIcon, Settings, LogOut, Shield, Key, ArrowLeft, Mail, Clock } from 'lucide-react';
 import { useStore } from '../contexts/StoreContext';
 import { User } from '../types';
 
 const Profile: React.FC = () => {
-  const { currentUser, setCurrentUser, users } = useStore();
+  const { currentUser, setCurrentUser, users, setUsers } = useStore();
   const [view, setView] = useState<'login' | 'register' | 'forgot'>('login');
   const [form, setForm] = useState({ name: '', email: '', password: '' });
   const [error, setError] = useState('');
@@ -16,32 +16,52 @@ const Profile: React.FC = () => {
     setError('');
     
     if (view === 'login') {
-      // Normalize search criteria
       const searchEmail = form.email.trim().toLowerCase();
       const searchPassword = form.password.trim();
 
-      // Check if user exists first
-      const userExists = users.some(u => u.email.toLowerCase() === searchEmail);
+      const user = users.find(u => u.email.toLowerCase() === searchEmail);
       
-      if (!userExists) {
+      if (!user) {
         setError('This email address is not recognized in our heritage registry.');
         return;
       }
 
-      const user = users.find(u => 
-        u.email.toLowerCase() === searchEmail && 
-        u.password === searchPassword
-      );
-
-      if (user) {
-        setCurrentUser(user);
-        setSuccess('Identity verified. Welcome to the Boutique.');
-      } else {
+      if (user.password !== searchPassword) {
         setError('The password provided does not match our records for this member.');
+        return;
       }
+
+      if (!user.isApproved) {
+        setError('Your membership application is currently under artisan review. You will be granted access once a curator confirms your status.');
+        return;
+      }
+
+      setCurrentUser(user);
+      setSuccess('Identity verified. Welcome to the Boutique.');
     } else if (view === 'register') {
-      setSuccess('Your membership request has been submitted for artisan review.');
-      setTimeout(() => setView('login'), 2500);
+      const email = form.email.trim().toLowerCase();
+      
+      if (users.some(u => u.email.toLowerCase() === email)) {
+        setError('An account with this email already exists in our archives.');
+        return;
+      }
+
+      const newUser: User = {
+        id: 'u-' + Math.random().toString(36).substring(7),
+        name: form.name.trim(),
+        email: email,
+        password: form.password.trim(),
+        isAdmin: false,
+        isApproved: false, // Must be approved by an Admin
+        orderHistory: [],
+        isSubscribed: true,
+        wishlist: []
+      };
+
+      setUsers([...users, newUser]);
+      setSuccess('Your membership request has been submitted for artisan review. Please await approval.');
+      setForm({ name: '', email: '', password: '' });
+      setTimeout(() => setView('login'), 3500);
     }
   };
 
@@ -179,7 +199,7 @@ const Profile: React.FC = () => {
           <p className="text-[10px] uppercase tracking-widest text-gold font-bold">The Aurelia Registry</p>
         </header>
 
-        {error && <p className="bg-red-50 text-red-700 p-4 rounded text-xs mb-6 text-center italic">{error}</p>}
+        {error && <div className="bg-red-50 text-red-700 p-4 rounded text-xs mb-6 text-center italic flex items-center justify-center gap-2"><Clock size={14} /> {error}</div>}
         {success && <p className="bg-green-50 text-green-700 p-4 rounded text-xs mb-6 text-center italic">{success}</p>}
 
         <form onSubmit={handleAuth} className="space-y-6">

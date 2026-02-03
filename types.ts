@@ -52,6 +52,7 @@ export interface User {
   password?: string;
   name: string;
   isAdmin: boolean;
+  isApproved: boolean; // Added for registration review flow
   orderHistory: Order[];
   isSubscribed: boolean;
   wishlist: string[]; // Product IDs

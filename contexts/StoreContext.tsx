@@ -28,19 +28,18 @@ const DEFAULT_ADMIN: User = {
   password: 'admin',
   name: 'Boutique Curator',
   isAdmin: true,
+  isApproved: true,
   orderHistory: [],
   isSubscribed: true,
   wishlist: []
 };
 
 export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Initialization helpers to ensure valid data from localStorage
   const getInitialState = <T,>(key: string, defaultValue: T): T => {
     try {
       const saved = localStorage.getItem(key);
       if (!saved) return defaultValue;
       const parsed = JSON.parse(saved);
-      // Extra check for users list to ensure it's not an empty array if it should have the admin
       if (key === 'al_users_list' && (!Array.isArray(parsed) || parsed.length === 0)) {
         return [DEFAULT_ADMIN] as unknown as T;
       }
@@ -57,7 +56,6 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [currentUser, setCurrentUser] = useState<User | null>(() => getInitialState('al_user', null));
   const [siteContent, setSiteContent] = useState<SiteContent>(() => getInitialState('al_site', INITIAL_SITE_CONTENT));
 
-  // Sync to localStorage whenever state changes
   useEffect(() => {
     localStorage.setItem('al_products', JSON.stringify(products));
   }, [products]);
@@ -107,23 +105,17 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const clearCart = () => setCart([]);
-
   const updateSiteContent = (content: SiteContent) => setSiteContent(content);
 
   const toggleWishlist = (productId: string) => {
     if (!currentUser) return;
-    
     setCurrentUser(prev => {
       if (!prev) return null;
       const updatedWishlist = prev.wishlist.includes(productId)
         ? prev.wishlist.filter(id => id !== productId)
         : [...prev.wishlist, productId];
-      
       const updatedUser = { ...prev, wishlist: updatedWishlist };
-      
-      // Also sync back to the master users list
       setUsers(allUsers => allUsers.map(u => u.id === updatedUser.id ? updatedUser : u));
-      
       return updatedUser;
     });
   };
