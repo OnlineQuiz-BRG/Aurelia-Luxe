@@ -25,32 +25,46 @@ interface StoreContextType {
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
 
 export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [products, setProducts] = useState<Product[]>(INITIAL_PRODUCTS);
+  const [products, setProducts] = useState<Product[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [siteContent, setSiteContent] = useState<SiteContent>(INITIAL_SITE_CONTENT);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Initial Data Load from Supabase
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
       const [
-        { data: productsData, error: prodError },
-        { data: usersData, error: userError },
-        { data: siteData, error: siteError }
+        { data: productsData },
+        { data: usersData },
+        { data: siteData }
       ] = await Promise.all([
         supabase.from('products').select('*'),
         supabase.from('users').select('*'),
         supabase.from('site_content').select('*').eq('id', 'main').maybeSingle()
       ]);
 
-      // If we got valid data, use it. Otherwise, defaults remain.
       if (productsData && productsData.length > 0) {
-        setProducts(productsData as Product[]);
+        setProducts(productsData.map(p => ({
+          id: p.id,
+          sku: p.sku,
+          name: p.name,
+          description: p.description,
+          basePrice: Number(p.base_price),
+          discount: p.discount,
+          category: p.category,
+          metalPurity: p.metal_purity,
+          stoneType: p.stone_type,
+          images: p.images || [],
+          stockStatus: p.stock_status,
+          weight: p.weight,
+          hallmark: p.hallmark,
+          isNew: p.is_new,
+          isPopular: p.is_popular,
+          reviews: []
+        })));
       } else {
-        console.info("Using local product registry.");
         setProducts(INITIAL_PRODUCTS);
       }
       
@@ -60,10 +74,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           email: u.email,
           password: u.password,
           name: u.name,
-          isAdmin: u.is_admin ?? u.isAdmin,
-          isApproved: u.is_approved ?? u.isApproved,
-          orderHistory: u.order_history || u.orderHistory || [],
-          isSubscribed: u.is_subscribed || u.isSubscribed || false,
+          isAdmin: u.is_admin,
+          isApproved: u.is_approved,
+          orderHistory: u.order_history || [],
+          isSubscribed: u.is_subscribed || false,
           wishlist: u.wishlist || []
         })) as User[];
         setUsers(mappedUsers);
@@ -83,7 +97,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         });
       }
     } catch (error) {
-      console.warn("Supabase fetch failed, falling back to local boutique state.", error);
+      console.warn("Supabase fetch failed, using local boutique state.", error);
       setProducts(INITIAL_PRODUCTS);
     } finally {
       setIsLoading(false);
@@ -93,21 +107,18 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   useEffect(() => {
     fetchData();
 
-    // Subscribe to Realtime Updates (only if keys likely exist)
-    if (process.env.SUPABASE_URL) {
-      const productSub = supabase.channel('products_realtime')
-        .on('postgres_changes', { event: '*', table: 'products' }, fetchData)
-        .subscribe();
+    const productSub = supabase.channel('products_realtime')
+      .on('postgres_changes', { event: '*', table: 'products' }, fetchData)
+      .subscribe();
 
-      const userSub = supabase.channel('users_realtime')
-        .on('postgres_changes', { event: '*', table: 'users' }, fetchData)
-        .subscribe();
+    const userSub = supabase.channel('users_realtime')
+      .on('postgres_changes', { event: '*', table: 'users' }, fetchData)
+      .subscribe();
 
-      return () => {
-        supabase.removeChannel(productSub);
-        supabase.removeChannel(userSub);
-      };
-    }
+    return () => {
+      supabase.removeChannel(productSub);
+      supabase.removeChannel(userSub);
+    };
   }, [fetchData]);
 
   const calculatePrice = useCallback((product: Product, metal: MetalPurity, stone: StoneType) => {
@@ -155,19 +166,12 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const toggleWishlist = async (productId: string) => {
     if (!currentUser) return;
-    
     const updatedWishlist = currentUser.wishlist.includes(productId)
       ? currentUser.wishlist.filter(id => id !== productId)
       : [...currentUser.wishlist, productId];
     
-    const { error } = await supabase
-      .from('users')
-      .update({ wishlist: updatedWishlist })
-      .eq('id', currentUser.id);
-
-    if (!error) {
-      setCurrentUser({ ...currentUser, wishlist: updatedWishlist });
-    }
+    const { error } = await supabase.from('users').update({ wishlist: updatedWishlist }).eq('id', currentUser.id);
+    if (!error) setCurrentUser({ ...currentUser, wishlist: updatedWishlist });
   };
 
   return (
