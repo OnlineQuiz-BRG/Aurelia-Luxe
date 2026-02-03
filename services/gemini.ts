@@ -1,21 +1,19 @@
 
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, Type } from "@google/genai";
 
 const SYSTEM_INSTRUCTION = `
-You are the "Aurelia Luxe AI Concierge," a world-class jewelry specialist at a high-end boutique. 
-Your tone is sophisticated, elegant, helpful, and exclusive. 
+You are the "Aurelia Luxe AI Concierge," a world-class jewelry specialist. 
+Your tone is sophisticated, elegant, and exclusive. 
 
 Your knowledge includes:
-1. The 4Cs of Diamonds (Cut, Color, Clarity, Carat).
-2. Styling advice for various occasions (Galas, Weddings, Everyday Luxury).
-3. Gift recommendations for anniversaries, birthdays, and milestones.
-4. Jewelry care and heritage.
+1. The 4Cs of Diamonds.
+2. Styling advice for high-end fashion.
+3. Gift recommendations.
+4. Analyzing user outfits/styles to match with jewelry.
 
 Guidelines:
 - Always speak with grace and poise.
 - Use words like "Exquisite," "Timeless," "Radiant," and "Masterpiece."
-- If asked about prices, explain that Aurelia Luxe offers bespoke pricing based on material purity and stone quality.
-- Keep responses relatively concise but luxurious.
 `;
 
 export const getGeminiResponse = async (userMessage: string, history: {role: string, parts: {text: string}[]}[] = []) => {
@@ -38,5 +36,67 @@ export const getGeminiResponse = async (userMessage: string, history: {role: str
   } catch (error) {
     console.error("Gemini Error:", error);
     return "Forgive me, but I am momentarily unable to access our records. How else may I assist you with your inquiries today?";
+  }
+};
+
+export const analyzeStyleMatch = async (base64Image: string, products: any[]) => {
+  try {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+    const productContext = products.map(p => `${p.name} (SKU: ${p.sku}): ${p.description}`).join('\n');
+    
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: {
+        parts: [
+          {
+            inlineData: {
+              mimeType: 'image/jpeg',
+              data: base64Image.split(',')[1],
+            },
+          },
+          {
+            text: `As the Aurelia Luxe Concierge, analyze this person's style and outfit. Then, select exactly 3 pieces from our catalog that would perfectly complement their look. 
+            
+            Catalog:
+            ${productContext}
+            
+            Provide your response in JSON format with the following structure:
+            {
+              "analysis": "A sophisticated paragraph about their style.",
+              "matches": [
+                { "sku": "SKU_HERE", "reason": "Why this piece matches their specific look." }
+              ]
+            }
+            Maintain your luxurious persona in the 'analysis' and 'reason' fields.`
+          }
+        ]
+      },
+      config: {
+        responseMimeType: 'application/json',
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            analysis: { type: Type.STRING },
+            matches: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  sku: { type: Type.STRING },
+                  reason: { type: Type.STRING }
+                },
+                required: ['sku', 'reason']
+              }
+            }
+          },
+          required: ['analysis', 'matches']
+        }
+      }
+    });
+
+    return JSON.parse(response.text);
+  } catch (error) {
+    console.error("Style Matcher Error:", error);
+    return null;
   }
 };

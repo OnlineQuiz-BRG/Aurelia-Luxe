@@ -12,6 +12,7 @@ import Bag from './pages/Bag';
 import Wishlist from './pages/Wishlist';
 import Profile from './pages/Profile';
 import Admin from './pages/Admin';
+import StyleMatcher from './pages/StyleMatcher';
 
 const App: React.FC = () => {
   return (
@@ -25,6 +26,7 @@ const App: React.FC = () => {
             <Route path="/wishlist" element={<Wishlist />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/admin" element={<Admin />} />
+            <Route path="/style-matcher" element={<StyleMatcher />} />
             {/* Fallback */}
             <Route path="*" element={<Home />} />
           </Routes>

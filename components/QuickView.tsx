@@ -1,8 +1,9 @@
 
 import React, { useState } from 'react';
-import { X, Check, ShoppingBag, ShieldCheck, Heart } from 'lucide-react';
+import { X, Check, ShoppingBag, ShieldCheck, Heart, Camera, Tag } from 'lucide-react';
 import { Product, MetalPurity, StoneType } from '../types';
 import { useStore } from '../contexts/StoreContext';
+import VirtualTryOn from './VirtualTryOn';
 
 interface QuickViewProps {
   product: Product;
@@ -14,12 +15,17 @@ const QuickView: React.FC<QuickViewProps> = ({ product, onClose }) => {
   const [selectedMetal, setSelectedMetal] = useState<MetalPurity>(product.metalPurity);
   const [selectedStone, setSelectedStone] = useState<StoneType>(product.stoneType);
   const [currentImageIdx, setCurrentImageIdx] = useState(0);
+  const [showTryOn, setShowTryOn] = useState(false);
 
-  const finalPrice = calculatePrice(product.basePrice, selectedMetal, selectedStone);
+  const prices = calculatePrice(product, selectedMetal, selectedStone);
   const isWishlisted = currentUser?.wishlist.includes(product.id);
 
-  const metals: MetalPurity[] = ['14k Gold', '18k Gold', '24k Gold', 'Platinum'];
-  const stones: StoneType[] = ['Diamond', 'Emerald', 'Sapphire', 'Ruby', 'None'];
+  const metals: MetalPurity[] = ['1 Gram Gold', '14k Gold', '18k Gold', '24k Gold', 'Platinum'];
+  const stones: StoneType[] = ['None', 'Pearl', 'Kundan', 'Ruby', 'Emerald', 'Sapphire', 'Diamond'];
+
+  if (showTryOn) {
+    return <VirtualTryOn product={product} onClose={() => setShowTryOn(false)} />;
+  }
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
@@ -36,6 +42,22 @@ const QuickView: React.FC<QuickViewProps> = ({ product, onClose }) => {
             alt={product.name}
             className="w-full h-full object-contain p-8 transition-opacity duration-500"
           />
+          
+          {/* Virtual Try-On Trigger */}
+          <button 
+            onClick={() => setShowTryOn(true)}
+            className="absolute top-4 left-4 bg-charcoal/10 hover:bg-gold hover:text-white p-3 rounded-full transition-all flex items-center space-x-2 text-[10px] uppercase tracking-widest font-bold"
+          >
+            <Camera size={16} />
+            <span className="hidden sm:inline">Virtual Try-On</span>
+          </button>
+
+          {product.discount && (
+            <div className="absolute top-4 right-4 bg-charcoal text-gold p-2 flex items-center gap-1 text-[10px] font-bold tracking-widest shadow-xl">
+               <Tag size={12} /> {product.discount}% OFF
+            </div>
+          )}
+
           {product.images.length > 1 && (
             <div className="absolute bottom-4 left-0 right-0 flex justify-center space-x-2">
               {product.images.map((_, idx) => (
@@ -53,9 +75,17 @@ const QuickView: React.FC<QuickViewProps> = ({ product, onClose }) => {
         <div className="w-full md:w-1/2 p-8 md:p-12 overflow-y-auto bg-cream">
           <p className="text-[10px] uppercase tracking-widest-luxury text-gold mb-2 font-bold">{product.sku}</p>
           <h2 className="text-3xl font-serif text-charcoal mb-4 leading-tight">{product.name}</h2>
-          <p className="text-lg text-charcoal/80 mb-6 italic border-b border-gold/10 pb-4">
-            ${finalPrice.toLocaleString()}
-          </p>
+          
+          <div className="flex items-center gap-4 mb-6 border-b border-gold/10 pb-4">
+            <p className="text-2xl font-serif text-charcoal">
+              ₹{prices.final.toLocaleString()}
+            </p>
+            {product.discount && (
+              <p className="text-lg text-charcoal/40 line-through italic">
+                ₹{prices.original.toLocaleString()}
+              </p>
+            )}
+          </div>
           
           <div className="space-y-6 mb-8">
             <p className="text-sm leading-relaxed text-charcoal/70">{product.description}</p>
@@ -67,7 +97,7 @@ const QuickView: React.FC<QuickViewProps> = ({ product, onClose }) => {
               </div>
               <div className="flex items-center space-x-2">
                 <Check size={14} className="text-gold" />
-                <span>Hallmark: {product.hallmark}</span>
+                <span>Type: Handmade Craft</span>
               </div>
               <div className="flex items-center space-x-2">
                 <Check size={14} className="text-gold" />
@@ -75,7 +105,7 @@ const QuickView: React.FC<QuickViewProps> = ({ product, onClose }) => {
               </div>
               <div className="flex items-center space-x-2">
                 <ShieldCheck size={14} className="text-gold" />
-                <span>Certified Heirloom</span>
+                <span>Indian Heritage Piece</span>
               </div>
             </div>
           </div>
@@ -83,7 +113,7 @@ const QuickView: React.FC<QuickViewProps> = ({ product, onClose }) => {
           {/* Configuration */}
           <div className="space-y-8 mb-10">
             <div>
-              <h4 className="text-[10px] uppercase tracking-widest font-bold mb-4">Select Metal Purity</h4>
+              <h4 className="text-[10px] uppercase tracking-widest font-bold mb-4">Select Plating / Metal</h4>
               <div className="flex flex-wrap gap-2">
                 {metals.map((metal) => (
                   <button
@@ -100,7 +130,7 @@ const QuickView: React.FC<QuickViewProps> = ({ product, onClose }) => {
             </div>
 
             <div>
-              <h4 className="text-[10px] uppercase tracking-widest font-bold mb-4">Stone Selection</h4>
+              <h4 className="text-[10px] uppercase tracking-widest font-bold mb-4">Embellishment Selection</h4>
               <div className="flex flex-wrap gap-2">
                 {stones.map((stone) => (
                   <button

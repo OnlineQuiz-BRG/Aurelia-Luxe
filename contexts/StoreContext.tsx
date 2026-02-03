@@ -12,13 +12,26 @@ interface StoreContextType {
   clearCart: () => void;
   currentUser: User | null;
   setCurrentUser: React.Dispatch<React.SetStateAction<User | null>>;
+  users: User[];
+  setUsers: React.Dispatch<React.SetStateAction<User[]>>;
   siteContent: SiteContent;
   updateSiteContent: (content: SiteContent) => void;
-  calculatePrice: (base: number, metal: MetalPurity, stone: StoneType) => number;
+  calculatePrice: (product: Product, metal: MetalPurity, stone: StoneType) => { original: number, final: number };
   toggleWishlist: (productId: string) => void;
 }
 
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
+
+const DEFAULT_ADMIN: User = {
+  id: 'u-admin',
+  email: 'admin@aurelia.com',
+  password: 'admin',
+  name: 'Boutique Curator',
+  isAdmin: true,
+  orderHistory: [],
+  isSubscribed: true,
+  wishlist: []
+};
 
 export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [products, setProducts] = useState<Product[]>(() => {
@@ -29,6 +42,11 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [cart, setCart] = useState<CartItem[]>(() => {
     const saved = localStorage.getItem('al_cart');
     return saved ? JSON.parse(saved) : [];
+  });
+
+  const [users, setUsers] = useState<User[]>(() => {
+    const saved = localStorage.getItem('al_users_list');
+    return saved ? JSON.parse(saved) : [DEFAULT_ADMIN];
   });
 
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
@@ -43,24 +61,30 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   useEffect(() => localStorage.setItem('al_products', JSON.stringify(products)), [products]);
   useEffect(() => localStorage.setItem('al_cart', JSON.stringify(cart)), [cart]);
+  useEffect(() => localStorage.setItem('al_users_list', JSON.stringify(users)), [users]);
   useEffect(() => localStorage.setItem('al_user', JSON.stringify(currentUser)), [currentUser]);
   useEffect(() => localStorage.setItem('al_site', JSON.stringify(siteContent)), [siteContent]);
 
-  const calculatePrice = useCallback((base: number, metal: MetalPurity, stone: StoneType) => {
-    return base + (PRICING_RULES.metal[metal] || 0) + (PRICING_RULES.stone[stone] || 0);
+  const calculatePrice = useCallback((product: Product, metal: MetalPurity, stone: StoneType) => {
+    const baseWithOptions = product.basePrice + (PRICING_RULES.metal[metal] || 0) + (PRICING_RULES.stone[stone] || 0);
+    const discountAmount = (product.discount || 0) / 100 * baseWithOptions;
+    return {
+      original: baseWithOptions,
+      final: baseWithOptions - discountAmount
+    };
   }, []);
 
   const addToCart = (product: Product, metal?: MetalPurity, stone?: StoneType) => {
     const selectedMetal = metal || product.metalPurity;
     const selectedStone = stone || product.stoneType;
-    const finalPrice = calculatePrice(product.basePrice, selectedMetal, selectedStone);
+    const { final } = calculatePrice(product, selectedMetal, selectedStone);
 
     const newItem: CartItem = {
       ...product,
       quantity: 1,
       selectedMetal,
       selectedStone,
-      finalPrice
+      finalPrice: final
     };
     setCart([...cart, newItem]);
   };
@@ -78,13 +102,15 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const updatedWishlist = currentUser.wishlist.includes(productId)
       ? currentUser.wishlist.filter(id => id !== productId)
       : [...currentUser.wishlist, productId];
-    setCurrentUser({ ...currentUser, wishlist: updatedWishlist });
+    const updatedUser = { ...currentUser, wishlist: updatedWishlist };
+    setCurrentUser(updatedUser);
+    setUsers(users.map(u => u.id === updatedUser.id ? updatedUser : u));
   };
 
   return (
     <StoreContext.Provider value={{
       products, setProducts, cart, addToCart, removeFromCart, clearCart,
-      currentUser, setCurrentUser, siteContent, updateSiteContent,
+      currentUser, setCurrentUser, users, setUsers, siteContent, updateSiteContent,
       calculatePrice, toggleWishlist
     }}>
       {children}

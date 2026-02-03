@@ -1,6 +1,6 @@
 
-export type MetalPurity = '14k Gold' | '18k Gold' | '24k Gold' | 'Platinum';
-export type StoneType = 'Diamond' | 'Emerald' | 'Sapphire' | 'Ruby' | 'None';
+export type MetalPurity = '14k Gold' | '18k Gold' | '24k Gold' | 'Platinum' | '1 Gram Gold';
+export type StoneType = 'Diamond' | 'Emerald' | 'Sapphire' | 'Ruby' | 'None' | 'Pearl' | 'Kundan';
 export type StockStatus = 'In Stock' | 'Made to Order';
 
 export interface ProductReview {
@@ -17,6 +17,7 @@ export interface Product {
   name: string;
   description: string;
   basePrice: number;
+  discount?: number; // Percentage discount
   category: string;
   metalPurity: MetalPurity;
   stoneType: StoneType;
@@ -48,6 +49,7 @@ export interface CartItem extends Product {
 export interface User {
   id: string;
   email: string;
+  password?: string;
   name: string;
   isAdmin: boolean;
   orderHistory: Order[];
@@ -75,6 +77,7 @@ export interface SiteContent {
 export interface StoreState {
   products: Product[];
   currentUser: User | null;
+  users: User[]; // Store multiple users for admin management
   cart: CartItem[];
   siteContent: SiteContent;
   categories: string[];

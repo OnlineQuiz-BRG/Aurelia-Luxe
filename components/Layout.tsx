@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { ShoppingBag, Heart, User, Menu, X, Search, LogOut } from 'lucide-react';
+import { ShoppingBag, Heart, User, Menu, X, Search, LogOut, Sparkles } from 'lucide-react';
 import { useStore } from '../contexts/StoreContext';
 
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -17,6 +17,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
   const navLinks = [
     { name: 'Collections', path: '/catalog' },
+    { name: 'Style Matcher', path: '/style-matcher', icon: true },
     { name: 'Bespoke', path: '/bespoke' },
     { name: 'Heritage', path: '/heritage' },
   ];
@@ -33,9 +34,10 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                 <Link
                   key={link.name}
                   to={link.path}
-                  className="text-charcoal hover:text-gold transition-colors tracking-widest text-xs uppercase font-medium"
+                  className={`text-charcoal hover:text-gold transition-colors tracking-widest text-xs uppercase font-medium flex items-center space-x-1 ${location.pathname === link.path ? 'text-gold' : ''}`}
                 >
-                  {link.name}
+                  {link.icon && <Sparkles size={12} className="text-gold" />}
+                  <span>{link.name}</span>
                 </Link>
               ))}
             </div>

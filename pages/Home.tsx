@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, Star, ShieldCheck, Diamond } from 'lucide-react';
+import { ArrowRight, Star, ShieldCheck, Diamond, Sparkles } from 'lucide-react';
 import { useStore } from '../contexts/StoreContext';
 import ProductCard from '../components/ProductCard';
 import QuickView from '../components/QuickView';
@@ -12,6 +12,7 @@ const Home: React.FC = () => {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
   const featured = products.filter(p => p.isPopular).slice(0, 4);
+  const newArrivals = products.filter(p => p.isNew).slice(0, 4);
 
   return (
     <div className="page-transition">
@@ -19,12 +20,12 @@ const Home: React.FC = () => {
       <section className="relative h-[90vh] overflow-hidden">
         <img 
           src={siteContent.hero.imageUrl} 
-          alt="Luxury Jewelry" 
+          alt="Luxury Handmade Jewelry" 
           className="w-full h-full object-cover scale-105"
         />
         <div className="absolute inset-0 bg-charcoal/40 flex items-center justify-center text-center p-4">
           <div className="max-w-4xl space-y-8 animate-in fade-in zoom-in duration-1000">
-            <p className="text-gold uppercase tracking-widest-luxury text-sm font-bold">Aurelia Luxe Boutique</p>
+            <p className="text-gold uppercase tracking-widest-luxury text-sm font-bold">Handmade Legacy</p>
             <h1 className="text-5xl md:text-8xl text-white font-serif tracking-tight leading-tight">
               {siteContent.hero.title}
             </h1>
@@ -36,9 +37,37 @@ const Home: React.FC = () => {
                 to="/catalog" 
                 className="bg-gold text-white px-12 py-5 uppercase tracking-widest-luxury text-xs font-bold hover:bg-white hover:text-charcoal transition-all shadow-2xl inline-block"
               >
-                View the Collection
+                Explore Artisan Creations
               </Link>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* New Arrivals Section */}
+      <section className="py-24 px-4 bg-white">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex flex-col md:flex-row md:items-end justify-between mb-16 space-y-4 md:space-y-0 border-l-4 border-gold pl-6">
+            <div>
+              <p className="text-gold uppercase tracking-widest-luxury text-xs font-bold mb-4 flex items-center gap-2">
+                <Sparkles size={14} /> Just Unveiled
+              </p>
+              <h2 className="text-4xl font-serif text-charcoal">New Arrivals</h2>
+            </div>
+            <Link to="/catalog" className="text-charcoal border-b border-gold pb-1 uppercase tracking-widest text-[10px] font-bold flex items-center space-x-2 hover:text-gold transition-colors">
+              <span>View Latest Drop</span>
+              <ArrowRight size={14} />
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+            {newArrivals.map(product => (
+              <ProductCard 
+                key={product.id} 
+                product={product} 
+                onQuickView={(p) => setSelectedProduct(p)} 
+              />
+            ))}
           </div>
         </div>
       </section>
@@ -48,8 +77,8 @@ const Home: React.FC = () => {
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-col md:flex-row md:items-end justify-between mb-16 space-y-4 md:space-y-0">
             <div>
-              <p className="text-gold uppercase tracking-widest-luxury text-xs font-bold mb-4">Curated Selection</p>
-              <h2 className="text-4xl font-serif text-charcoal">Featured Treasures</h2>
+              <p className="text-gold uppercase tracking-widest-luxury text-xs font-bold mb-4">Artisan Picks</p>
+              <h2 className="text-4xl font-serif text-charcoal">Timeless Treasures</h2>
             </div>
             <Link to="/catalog" className="text-charcoal border-b border-gold pb-1 uppercase tracking-widest text-[10px] font-bold flex items-center space-x-2 hover:text-gold transition-colors">
               <span>Explore All Pieces</span>
@@ -93,27 +122,27 @@ const Home: React.FC = () => {
             <div className="w-16 h-16 bg-gold/5 rounded-full flex items-center justify-center mx-auto text-gold mb-6">
               <ShieldCheck size={32} />
             </div>
-            <h3 className="text-xl font-serif">Certified Sourcing</h3>
+            <h3 className="text-xl font-serif">Artisan Certification</h3>
             <p className="text-sm text-charcoal/60 leading-relaxed italic">
-              Every stone is conflict-free and ethically sourced through our exclusive global network of mines.
+              Each piece is individually handcrafted and carries the mark of its creator.
             </p>
           </div>
           <div className="text-center space-y-4">
             <div className="w-16 h-16 bg-gold/5 rounded-full flex items-center justify-center mx-auto text-gold mb-6">
               <Star size={32} />
             </div>
-            <h3 className="text-xl font-serif">Master Craftsmanship</h3>
+            <h3 className="text-xl font-serif">1-Gram Gold Excellence</h3>
             <p className="text-sm text-charcoal/60 leading-relaxed italic">
-              Hand-finished by our artisans with over 40 years of experience in high jewelry fabrication.
+              Premium micro-plating technology that offers the look and feel of solid gold forever.
             </p>
           </div>
           <div className="text-center space-y-4">
             <div className="w-16 h-16 bg-gold/5 rounded-full flex items-center justify-center mx-auto text-gold mb-6">
               <Diamond size={32} />
             </div>
-            <h3 className="text-xl font-serif">Lifetime Gaurantee</h3>
+            <h3 className="text-xl font-serif">Heritage Designs</h3>
             <p className="text-sm text-charcoal/60 leading-relaxed italic">
-              Your investment is protected with our complimentary annual cleaning and resizing services.
+              Designs inspired by century-old Indian temple and royal jewelry archives.
             </p>
           </div>
         </div>
